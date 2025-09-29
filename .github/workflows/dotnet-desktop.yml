@@ -44,19 +44,13 @@ jobs:
         - name: Unity Build (APK)
           shell: powershell
           run: |
-            # Unity 실행 경로
             $unityExe = "C:\Program Files\Unity\Hub\Editor\2022.3.60f1\Editor\Unity.exe"
-  
-            # Unity argument
             $args = @(
               "-batchmode"
               "-nographics"
               "-quit"
               "-projectPath ."
-              "-buildTarget Android"
-              "-customBuildName Android"
-              "-customBuildPath build\Android\Android.apk"
-              # "-executeMethod BuildSettingSO.OnChange_TestBuild"
+              "-executeMethod BuildScript.BuildAndroid"   # 빌드 실행 함수 지정
               "-ignore-import-errors"
             )
   
