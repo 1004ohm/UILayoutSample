@@ -1,58 +1,39 @@
 name: UnityBuild
 
 on:
+  workflow_dispatch:  # 수동 실행 가능
   schedule:
-    # 매일 24시간마다 (UTC 기준)
-    - cron: "0 0 * * *"
-           # ┬ ┬ ┬ ┬ ┬
-           # │ │ │ │ │
-           # │ │ │ │ └─ Day of week (0 - 7) (0 or 7 is Sunday)
-           # │ │ │ └─ Month (1 - 12)
-           # │ │ └─ Day of month (1 - 31)
-           # │ └─ Hour (0 - 23)
-           # └─ Minute (0 - 59)
-    
-  workflow_dispatch: # 수동 실행 가능
+    - cron: "0 0 * * *"  # 매일 UTC 기준 0시
 
 permissions: write-all
 
-env:
-  RCLONE_CONFIG: ${{ secrets.RCLONE_CONFIG }}
-
+jobs:
+  build_android:
+    name: Build Android APK
+    runs-on: self-hosted
     steps:
-      # 1. 프로젝트 체크아웃
-      - name: Check Out
+      # 1️⃣ 프로젝트 체크아웃
+      - name: Check out repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           lfs: true
 
-      # 2. Unity 라이선스 활성화
-      - name: Activate Unity License
-        shell: powershell
-        run: |
-          $unityExe = "C:\Program Files\Unity\Hub\Editor\2022.3.60f1\Editor\Unity.exe"
-          & $unityExe -batchmode -nographics -quit -username $env:UNITY_USERNAME -password $env:UNITY_PASSWORD -serial $env:UNITY_SERIAL -logFile "$env:GITHUB_WORKSPACE\unity_license.log"
-          if ($LASTEXITCODE -ne 0) {
-            Write-Host "Unity License Activation Failed!"
-            exit $LASTEXITCODE
-          }
-
-      # 3. 씬 존재 확인
+      # 2️⃣ 씬 존재 확인
       - name: Verify Scenes
         shell: powershell
         run: |
           $scenes = @("Assets/Scenes/SampleScene.unity")
           foreach ($s in $scenes) {
-            if (-not (Test-Path $s)) {
-              Write-Error "씬 파일이 존재하지 않음: $s"
-              exit 1
-            } else {
-              Write-Host "씬 존재 확인: $s"
-            }
+              if (-not (Test-Path $s)) {
+                  Write-Error "씬 파일이 존재하지 않음: $s"
+                  exit 1
+              } else {
+                  Write-Host "씬 존재 확인: $s"
+              }
           }
 
-      # 4. Unity Library 초기화
+      # 3️⃣ Unity 라이브러리 초기화
       - name: Initialize Unity Library
         shell: powershell
         run: |
@@ -68,11 +49,20 @@ env:
           Write-Host "Initializing Unity Library..."
           & $unityExe $args
           if ($LASTEXITCODE -ne 0) {
-            Write-Host "Unity Library Initialization Failed!"
-            exit $LASTEXITCODE
+              Write-Host "Unity Library Initialization Failed!"
+              exit $LASTEXITCODE
           }
 
-      # 5. Unity 빌드 실행
+      # 4️⃣ Library 캐시
+      - name: Cache Library
+        uses: actions/cache@v4
+        with:
+          path: Library
+          key: Library-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            Library-
+
+      # 5️⃣ Unity 빌드
       - name: Build Android APK
         shell: powershell
         run: |
@@ -89,34 +79,44 @@ env:
           )
           Write-Host "Unity Build Start..."
           & $unityExe $args
-          if ($LASTEXITCODE -ne 0) { 
-            Write-Host "Unity Build Failed!"
-            exit $LASTEXITCODE
+          if ($LASTEXITCODE -ne 0) {
+              Write-Host "Unity Build Failed!"
+              exit $LASTEXITCODE
           }
           Write-Host "Unity Build Complete."
 
-      # 6. rclone 설치 및 업로드
-      - name: Install rclone
-        shell: powershell
-        run: choco upgrade rclone -y
-
-      - name: Setup rclone config
+      # 6️⃣ Unity 버전 추출
+      - name: Export Unity Version
         shell: powershell
         run: |
-          $rclonePath = Join-Path $env:USERPROFILE ".config\rclone"
-          if (-Not (Test-Path $rclonePath)) { New-Item -ItemType Directory -Force -Path $rclonePath }
-          $env:RCLONE_CONFIG | Out-File -FilePath (Join-Path $rclonePath "rclone.conf") -Encoding ASCII
+          $unityExe = "C:\Program Files\Unity\Hub\Editor\2022.3.60f1\Editor\Unity.exe"
+          $args = @(
+            "-batchmode",
+            "-quit",
+            "-projectPath", "${{ github.workspace }}",
+            "-executeMethod", "BuildInfoExporter.ExportVersion"
+          )
+          & $unityExe $args
 
-      - name: Upload APK to Google Drive
+      # 7️⃣ Unity 버전 읽기
+      - name: Read Unity Version
+        id: version
+        shell: powershell
+        run: |
+          $VERSION = Get-Content -Path "unity_version.txt" -Raw
+          "version=$VERSION" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding ASCII
+
+      # 8️⃣ APK 이름 변경 후 Google Drive 업로드
+      - name: Rename and Upload APK
         shell: powershell
         run: |
           $DATE = Get-Date -Format "yyyyMMdd"
-          $APK = Get-ChildItem -Path "build/Android/" -Filter "*.apk" | Select-Object -First 1
-          $NEW_NAME = "${DATE}_$($APK.Name)"
-          Rename-Item -Path $APK.FullName -NewName $NEW_NAME -Force
-          rclone copy "build/Android/$NEW_NAME" "gdrive:1bJ-xWbifFZY9KuQaPSpCi1KoLy9GQp38" -P
+          $VERSION = '${{ steps.version.outputs.version }}'
+          $FILE_NAME = "${DATE}_${VERSION}.apk"
+          Move-Item -Path "build\Android\*.apk" -Destination "build\Android\$FILE_NAME" -Force
+          rclone copy "build\Android\$FILE_NAME" "gdrive:YOUR_DRIVE_FOLDER_ID" -P
 
-      # 7. 빌드 폴더 정리
+      # 9️⃣ 빌드 폴더 정리
       - name: Cleanup Build Folder
         shell: powershell
         run: |
