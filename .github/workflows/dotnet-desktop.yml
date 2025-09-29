@@ -32,6 +32,17 @@ jobs:
           fetch-depth: 0
           lfs: true
 
+      # 2️⃣ Unity Library 초기화 (에셋 DB 생성)
+      - name: Initialize Unity Library
+        run: |
+          "C:\Program Files\Unity\Hub\Editor\2022.3.60f1\Editor\Unity.exe" ^
+          -batchmode ^
+          -nographics ^
+          -quit ^
+          -projectPath "%GITHUB_WORKSPACE%" ^
+          -logFile "%GITHUB_WORKSPACE%\unity_init.log" ^
+          -executeMethod BuildScript.InitLibrary
+
       # 2. Library 캐시
       - name: Cache Library
         uses: actions/cache@v4
