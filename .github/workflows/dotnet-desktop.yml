@@ -77,14 +77,6 @@ jobs:
           run: |
             $rclonePath = Join-Path $env:USERPROFILE ".config\rclone"
             if (-Not (Test-Path $rclonePath)) { New-Item -ItemType Directory -Force -Path $rclonePath }
-            $env:RCLONE_CONFIG | Out-File -FilePath (Join-Path $rclonePath "rclone.conf") -Encoding 
-  
-        # 5. rclone 설정
-        - name: Setup rclone config
-          shell: powershell
-          run: |
-            $rclonePath = Join-Path $env:USERPROFILE ".config\rclone"
-            if (-Not (Test-Path $rclonePath)) { New-Item -ItemType Directory -Force -Path $rclonePath }
             $env:RCLONE_CONFIG | Out-File -FilePath (Join-Path $rclonePath "rclone.conf") -Encoding ASCII
   
         # 6. Unity 버전 추출
