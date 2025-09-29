@@ -41,21 +41,46 @@ jobs:
           restore-keys: |
             Library-
 
-      # 3. Unity Build
-      - name: Unity Build (APK)
+      # 3. 씬 존재 확인 (Runner에서)
+      - name: Verify Scenes
         shell: powershell
         run: |
+          $scenes = @("Assets/Scenes/SampleScene.unity")
+          foreach ($s in $scenes) {
+            if (-not (Test-Path $s)) {
+              Write-Error "씬 파일이 존재하지 않음: $s"
+              exit 1
+            } else {
+              Write-Host "씬 존재 확인: $s"
+            }
+          }
+
+      # 2. Unity 빌드 실행
+      - name: Build Android APK
+        run: |
           $unityExe = "C:\Program Files\Unity\Hub\Editor\2022.3.60f1\Editor\Unity.exe"
+
           $args = @(
-            "-batchmode"
-            "-nographics"
-            "-quit"
-            "-projectPath ."
-            "-buildTarget Android"
-            "-executeMethod BuildScript.BuildAndroid"
+            "-batchmode",
+            "-nographics",
+            "-quit",
+            "-projectPath", "${{ github.workspace }}",
+            "-buildTarget", "Android",
+            "-executeMethod", "BuildScript.BuildAndroid",
+            "-logFile", "${{ github.workspace }}\unity_build.log",
             "-ignore-import-errors"
           )
+
+          Write-Host "Unity 빌드 시작..."
           & $unityExe $args
+
+          if ($LASTEXITCODE -ne 0) { 
+            Write-Host "Unity 빌드 실패!"
+            exit $LASTEXITCODE
+          }
+
+          Write-Host "Unity 빌드 완료."
+        shell: pwsh
 
       # 4. rclone 설치
       - name: Install rclone
