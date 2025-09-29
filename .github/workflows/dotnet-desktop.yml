@@ -93,16 +93,14 @@ jobs:
       
       #     Write-Host "Unity Build Complete."
 
-      - name: Build with Unity Build Action
-        uses: yukiarrr/unity-build-action@v0.6.1
+      # 3. Unity Build 실행 (game-ci/unity-builder)
+      - name: Build with Unity Builder
+        uses: game-ci/unity-builder@v4
         with:
-          unity-version: "2022.3.60f1"
-          unity-username: ${{ secrets.UNITY_EMAIL }}
-          unity-password: ${{ secrets.UNITY_PASSWORD }}
-          unity-serial: ${{ secrets.UNITY_LICENSE }}
-          build-target: "Android"
-          project-path: "."  # 또는 필요에 따라 경로
-          # execute-method: "BuildScript.BuildAndroid"
+          projectPath: .
+          targetPlatform: Android   # Android, StandaloneWindows64, WebGL 등 지원
+          unityVersion: 2022.3.60f1 # 네가 설치한 버전
+          # buildMethod: BuildScript.BuildAndroid # (선택) C# 빌드 함수 지정 가능
 
       # 4. rclone 설치
       - name: Install rclone
