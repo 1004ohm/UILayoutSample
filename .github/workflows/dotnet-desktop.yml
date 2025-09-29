@@ -70,7 +70,15 @@ jobs:
           if (-Not (Test-Path $rclonePath)) { New-Item -ItemType Directory -Force -Path $rclonePath }
           $env:RCLONE_CONFIG | Out-File -FilePath (Join-Path $rclonePath "rclone.conf") -Encoding ASCII
 
-      # 6. Unity 버전 읽기
+      # 6. Unity 버전 추출
+      - name: Export Unity Version
+        shell: powershell
+        run: |
+          $unityExe = "C:\Program Files\Unity\Hub\Editor\2022.3.60f1\Editor\Unity.exe"
+          $args = "-batchmode -quit -projectPath . -executeMethod BuildInfoExporter.ExportVersion"
+          Start-Process -FilePath $unityExe -ArgumentList $args -Wait
+
+      # 7. Unity 버전 읽기
       - name: Read Unity Version
         id: version
         shell: powershell
@@ -78,7 +86,7 @@ jobs:
           $VERSION = Get-Content -Path "unity_version.txt" -Raw
           "version=$VERSION" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding ASCII
 
-      # 7. 빌드 파일 이름 변경 및 Google Drive 업로드
+      # 8. 빌드 파일 이름 변경 및 Google Drive 업로드
       - name: Rename and Upload to Google Drive (APK)
         shell: powershell
         run: |
@@ -88,7 +96,7 @@ jobs:
           Move-Item -Path "build\Android\*.apk" -Destination "build\Android\$FILE_NAME" -Force
           rclone copy "build\Android\$FILE_NAME" "gdrive:1bJ-xWbifFZY9KuQaPSpCi1KoLy9GQp38" -P
 
-      # 8. 빌드 폴더 정리
+      # 9. 빌드 폴더 정리
       - name: Cleanup Build Folder
         shell: powershell
         run: |
