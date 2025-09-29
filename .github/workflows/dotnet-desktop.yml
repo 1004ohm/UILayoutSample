@@ -78,30 +78,20 @@ jobs:
 
       # 2. Unity 빌드 실행
       - name: Build Android APK
+        shell: powershell
         run: |
           $unityExe = "C:\Program Files\Unity\Hub\Editor\2022.3.60f1\Editor\Unity.exe"
-
-          $args = @(
-            "-batchmode",
-            "-nographics",
-            "-quit",
-            "-projectPath", "${{ github.workspace }}",
-            "-buildTarget", "Android",
-            "-executeMethod", "BuildScript.BuildAndroid",
-            "-logFile", "${{ github.workspace }}\unity_build.log",
-            "-ignore-import-errors"
-          )
-
+          $args = "-batchmode -nographics -quit -projectPath `"$env:GITHUB_WORKSPACE`" -buildTarget Android -executeMethod BuildScript.BuildAndroid -logFile `"$env:GITHUB_WORKSPACE\unity_build.log`" -ignore-import-errors"
+      
           Write-Host "Unity Build Start..."
-          & $unityExe $args
-
-          if ($LASTEXITCODE -ne 0) { 
-            Write-Host "Unity Build Fail!"
-            exit $LASTEXITCODE
+          Start-Process -FilePath $unityExe -ArgumentList $args -Wait
+      
+          if ($LASTEXITCODE -ne 0) {
+              Write-Host "Unity Build Fail!"
+              exit $LASTEXITCODE
           }
-
-          Write-Host "Unity Build Complate."
-        shell: powershell
+      
+          Write-Host "Unity Build Complete."
 
       # 4. rclone 설치
       - name: Install rclone
