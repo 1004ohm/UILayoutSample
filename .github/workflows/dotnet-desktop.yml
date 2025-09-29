@@ -80,7 +80,7 @@ jobs:
           }
 
           Write-Host "Unity 빌드 완료."
-        shell: pwsh
+        shell: powershell
 
       # 4. rclone 설치
       - name: Install rclone
