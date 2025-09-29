@@ -2,207 +2,85 @@ name: UnityBuild
 
 on:
   schedule:
-    # 매일 24시간마다 (UTC 기준)
-    - cron: "0 0 * * *"
-           # ┬ ┬ ┬ ┬ ┬
-           # │ │ │ │ │
-           # │ │ │ │ └─ Day of week (0 - 7) (0 or 7 is Sunday)
-           # │ │ │ └─ Month (1 - 12)
-           # │ │ └─ Day of month (1 - 31)
-           # │ └─ Hour (0 - 23)
-           # └─ Minute (0 - 59)
-  workflow_dispatch: # 수동 실행도 가능
+    - cron: "0 0 * * *" # 매일 24시간마다 (UTC 기준)
+  workflow_dispatch: # 수동 실행 가능
 
 permissions: write-all
 
 env:
   RCLONE_CONFIG: ${{ secrets.RCLONE_CONFIG }}
-  
+
 jobs:
   buildForAndroidApk:
     name: Build Android APK 🛸
     runs-on: self-hosted
-    timeout-minutes: 60
-    
+
     steps:
-        - name: Check Out
-          uses: actions/checkout@v4
-          with:
-            fetch-depth: 0
-            lfs: true
-  
-        - name: Cache Library
-          uses: actions/cache@v4
-          with:
-            path: Library
-            key: Library-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
-            restore-keys: |
-              Library-
+      # 1. 프로젝트 체크아웃
+      - name: Check Out
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          lfs: true
 
-        - name: Activate Unity License
-          timeout-minutes: 5
-          shell: powershell
-          run: |
-            $unityExe = "C:\Program Files\Unity\Hub\Editor\2022.3.60f1\Editor\Unity.exe"
-            
-            Write-Host "Activating Unity license..."
-            
-            # -quit 제거: 라이센스 활성화가 완료될 때까지 프로세스 유지
-            $process = Start-Process -FilePath $unityExe -ArgumentList @(
-              "-batchmode",
-              "-nographics",
-              "-username", "${{ secrets.UNITY_EMAIL }}",
-              "-password", "${{ secrets.UNITY_PASSWORD }}"
-            ) -PassThru -NoNewWindow
-            
-            $timeout = 180
-            $elapsed = 0
-            while (-not $process.HasExited -and $elapsed -lt $timeout) {
-              Start-Sleep -Seconds 5
-              $elapsed += 5
-              if ($elapsed % 30 -eq 0) {
-                Write-Host "Waiting for license activation... ($elapsed seconds)"
-              }
-            }
-            
-            if (-not $process.HasExited) {
-              Write-Host "License activation timeout, forcing exit..."
-              Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
-              Start-Sleep -Seconds 2
-            }
-            
-            $exitCode = $process.ExitCode
-            Write-Host "License process exit code: $exitCode"
-            
-            # Exit code 0 또는 1 모두 허용 (Unity는 라이센스 활성화 후 1로 종료할 수 있음)
-            if ($exitCode -gt 1) {
-              Write-Error "License activation failed with exit code $exitCode"
-              exit 1
-            }
-            
-            Write-Host "License activation completed"
+      # 2. Library 캐시
+      - name: Cache Library
+        uses: actions/cache@v4
+        with:
+          path: Library
+          key: Library-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            Library-
 
-        - name: Unity Build (APK)
-          timeout-minutes: 30
-          shell: powershell
-          run: |
-            $unityExe = "C:\Program Files\Unity\Hub\Editor\2022.3.60f1\Editor\Unity.exe"
-            $projectPath = $pwd.Path
-            $logFile = Join-Path $projectPath "unity_build.log"
-            
-            if (Test-Path "build") {
-              Remove-Item "build" -Recurse -Force
-            }
-            
-            Write-Host "Starting Unity build..."
-            
-            $process = Start-Process -FilePath $unityExe -ArgumentList @(
-              "-batchmode",
-              "-nographics",
-              "-quit",
-              "-projectPath", $projectPath,
-              "-executeMethod", "BuildScript.BuildAndroid",
-              "-logFile", $logFile
-            ) -PassThru -NoNewWindow
-            
-            $timeout = 1500
-            $elapsed = 0
-            while (-not $process.HasExited -and $elapsed -lt $timeout) {
-              Start-Sleep -Seconds 10
-              $elapsed += 10
-              if ($elapsed % 60 -eq 0) {
-                Write-Host "Building... ($([math]::Floor($elapsed/60)) minutes elapsed)"
-              }
-            }
-            
-            if (-not $process.HasExited) {
-              Write-Host "Build timeout, killing process..."
-              Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
-              exit 1
-            }
-            
-            if (Test-Path $logFile) {
-              Write-Host "`n=== Build Log (Last 50 lines) ==="
-              Get-Content $logFile -Tail 50
-            }
-            
-            $exitCode = $process.ExitCode
-            Write-Host "`nBuild process exit code: $exitCode"
-            
-            if ($exitCode -ne 0) {
-              Write-Error "Build failed with exit code $exitCode"
-              exit 1
-            }
-            
-            $expectedApk = "build\Android\Android.apk"
-            if (-Not (Test-Path $expectedApk)) {
-                Write-Error "APK not found at: $expectedApk"
-                exit 1
-            }
-            
-            $apkSize = (Get-Item $expectedApk).Length / 1MB
-            Write-Host "Build completed successfully! APK size: $([math]::Round($apkSize, 2)) MB"
-  
-        - name: Install rclone
-          shell: powershell
-          run: |
-            $env:PATH += ";C:\ProgramData\chocolatey\bin"
-            choco upgrade rclone -y
-  
-        - name: Setup rclone config
-          shell: powershell
-          run: |
-            $rclonePath = Join-Path $env:USERPROFILE ".config\rclone"
-            if (-Not (Test-Path $rclonePath)) { 
-              New-Item -ItemType Directory -Force -Path $rclonePath 
-            }
-            $env:RCLONE_CONFIG | Out-File -FilePath (Join-Path $rclonePath "rclone.conf") -Encoding ASCII
-  
-        - name: Rename APK with Date & Version
-          id: rename_apk
-          shell: powershell
-          run: |
-            $DATE = Get-Date -Format "yyyyMMdd"
-            $VERSION = "v1.0"
-            $buildPath = "build\Android"
-            $apkFile = Join-Path $buildPath "Android.apk"
-            $newName = "${DATE}_${VERSION}.apk"
-            $newPath = Join-Path $buildPath $newName
-            
-            if (-Not (Test-Path $apkFile)) {
-              Write-Error "APK not found for renaming: $apkFile"
-              exit 1
-            }
-            
-            Move-Item -Path $apkFile -Destination $newPath -Force
-            Write-Host "APK renamed: $newName"
-            "apk_path=$newPath" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding ASCII -Append
-  
-        - name: Upload to Google Drive
-          shell: powershell
-          run: |
-            $apkPath = "${{ steps.rename_apk.outputs.apk_path }}"
-            
-            if (-Not (Test-Path $apkPath)) {
-              Write-Error "APK not found for upload: $apkPath"
-              exit 1
-            }
-            
-            Write-Host "Uploading to Google Drive..."
-            rclone copy $apkPath "gdrive:1bJ-xWbifFZY9KuQaPSpCi1KoLy9GQp38" -P
-            
-            if ($LASTEXITCODE -eq 0) {
-              Write-Host "Upload completed successfully"
-            } else {
-              Write-Error "Upload failed with exit code $LASTEXITCODE"
-              exit 1
-            }
-  
-        - name: Cleanup Build Folder
-          if: always()
-          shell: powershell
-          run: |
-            if (Test-Path "build") { 
-              Remove-Item "build\*" -Recurse -Force 
-              Write-Host "Build folder cleaned"
-            }
+      # 3. Unity Build
+      - name: Unity Build (APK)
+        shell: powershell
+        run: |
+          $unityExe = "C:\Program Files\Unity\Hub\Editor\2022.3.60f1\Editor\Unity.exe"
+          $args = @(
+            "-batchmode"
+            "-nographics"
+            "-quit"
+            "-projectPath ."
+            "-buildTarget Android"
+            "-executeMethod BuildScript.BuildAndroid"
+            "-ignore-import-errors"
+          )
+          & $unityExe $args
+
+      # 4. rclone 설치
+      - name: Install rclone
+        shell: powershell
+        run: choco upgrade rclone -y
+
+      # 5. rclone 설정
+      - name: Setup rclone config
+        shell: powershell
+        run: |
+          $rclonePath = Join-Path $env:USERPROFILE ".config\rclone"
+          if (-Not (Test-Path $rclonePath)) { New-Item -ItemType Directory -Force -Path $rclonePath }
+          $env:RCLONE_CONFIG | Out-File -FilePath (Join-Path $rclonePath "rclone.conf") -Encoding ASCII
+
+      # 6. Unity 버전 읽기
+      - name: Read Unity Version
+        id: version
+        shell: powershell
+        run: |
+          $VERSION = Get-Content -Path "unity_version.txt" -Raw
+          "version=$VERSION" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding ASCII
+
+      # 7. 빌드 파일 이름 변경 및 Google Drive 업로드
+      - name: Rename and Upload to Google Drive (APK)
+        shell: powershell
+        run: |
+          $DATE = Get-Date -Format "yyyyMMdd"
+          $VERSION = '${{ steps.version.outputs.version }}'
+          $FILE_NAME = "${DATE}_${VERSION}.apk"
+          Move-Item -Path "build\Android\*.apk" -Destination "build\Android\$FILE_NAME" -Force
+          rclone copy "build\Android\$FILE_NAME" "gdrive:1bJ-xWbifFZY9KuQaPSpCi1KoLy9GQp38" -P
+
+      # 8. 빌드 폴더 정리
+      - name: Cleanup Build Folder
+        shell: powershell
+        run: |
+          if (Test-Path "build") { Remove-Item "build\*" -Recurse -Force }
