@@ -58,4 +58,10 @@ public static class BuildScript
         // 7. 추가: 빌드 후 라이브러리 초기화 문제 방지
         AssetDatabase.Refresh();
     }
+
+    public static void InitLibrary()
+    {
+        Debug.Log("InitLibrary 실행됨");
+        AssetDatabase.Refresh();
+    }
 }
