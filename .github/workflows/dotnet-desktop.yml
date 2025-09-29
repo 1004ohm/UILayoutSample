@@ -32,6 +32,27 @@ jobs:
           fetch-depth: 0
           lfs: true
 
+      # 2️⃣ Unity Library 초기화 (에셋 DB 생성)
+      - name: Initialize Unity Library
+        shell: powershell
+        run: |
+          $unityExe = "C:\Program Files\Unity\Hub\Editor\2022.3.60f1\Editor\Unity.exe"
+          $args = @(
+            "-batchmode",
+            "-nographics",
+            "-quit",
+            "-projectPath", "${{ github.workspace }}",
+            "-logFile", "${{ github.workspace }}\unity_init.log",
+            "-executeMethod", "BuildScript.InitLibrary"
+          )
+      
+          Write-Host "Initializing Unity Library..."
+          & $unityExe $args
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "Unity Library Initialization Failed!"
+            exit $LASTEXITCODE
+          }
+
       # 2. Library 캐시
       - name: Cache Library
         uses: actions/cache@v4
@@ -71,16 +92,16 @@ jobs:
             "-ignore-import-errors"
           )
 
-          Write-Host "Unity 빌드 시작..."
+          Write-Host "Unity Build Start..."
           & $unityExe $args
 
           if ($LASTEXITCODE -ne 0) { 
-            Write-Host "Unity 빌드 실패!"
+            Write-Host "Unity Build Fail!"
             exit $LASTEXITCODE
           }
 
-          Write-Host "Unity 빌드 완료."
-        shell: pwsh
+          Write-Host "Unity Build Complate."
+        shell: powershell
 
       # 4. rclone 설치
       - name: Install rclone
