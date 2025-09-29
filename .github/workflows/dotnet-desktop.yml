@@ -19,7 +19,7 @@ env:
   RCLONE_CONFIG: ${{ secrets.RCLONE_CONFIG }}
   UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
   UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
-  UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+  UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
   
 jobs:
   buildForAndroidApk:
@@ -50,15 +50,15 @@ jobs:
             # 라이센스 상태 확인
             Write-Host "Checking Unity license status..."
             
-            # Personal/Plus 라이센스의 경우 (Serial이 없는 경우)
-            if ([string]::IsNullOrEmpty($env:UNITY_SERIAL)) {
+            # Personal/Plus 라이센스의 경우 (LICENSE이 없는 경우)
+            if ([string]::IsNullOrEmpty($env:UNITY_LICENSE)) {
               Write-Host "Using Personal/Plus license"
               & $unityExe -batchmode -quit -nographics -returnlicense 2>&1 | Out-Null
               & $unityExe -batchmode -quit -nographics -username "$env:UNITY_EMAIL" -password "$env:UNITY_PASSWORD"
             } else {
               # Pro 라이센스의 경우
-              Write-Host "Using Pro license with serial"
-              & $unityExe -batchmode -quit -nographics -username "$env:UNITY_EMAIL" -password "$env:UNITY_PASSWORD" -serial "$env:UNITY_SERIAL"
+              Write-Host "Using Pro license with LICENSE"
+              & $unityExe -batchmode -quit -nographics -username "$env:UNITY_EMAIL" -password "$env:UNITY_PASSWORD" -LICENSE "$env:UNITY_LICENSE"
             }
             
             Write-Host "License activation completed"
