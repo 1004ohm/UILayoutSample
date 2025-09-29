@@ -163,7 +163,7 @@ jobs:
           path: Library
           key: Library-${{ runner.os }}-${{ github.sha }}
           restore-keys: |
-            Library-${{ runner.os }}-
+            Library-
 
       # Step3 - Unity Build
       - name: Unity Build
