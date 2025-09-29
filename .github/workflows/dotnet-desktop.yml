@@ -1,0 +1,120 @@
+name: UnityBuild
+
+on:
+  schedule:
+    # 매일 24시간마다 (UTC 기준)
+    - cron: "0 0 * * *"
+           # ┬ ┬ ┬ ┬ ┬
+           # │ │ │ │ │
+           # │ │ │ │ └─ Day of week (0 - 7) (0 or 7 is Sunday)
+           # │ │ │ └─ Month (1 - 12)
+           # │ │ └─ Day of month (1 - 31)
+           # │ └─ Hour (0 - 23)
+           # └─ Minute (0 - 59)
+  workflow_dispatch: # 수동 실행도 가능
+
+permissions: write-all
+
+env:
+  RCLONE_CONFIG: ${{ secrets.RCLONE_CONFIG }}
+  
+jobs:
+  buildForAndroidApk:
+    name: Build Android APK 🛸
+    runs-on: self-hosted
+    
+    steps:
+        # 1. 프로젝트 체크아웃
+        - name: Check Out
+          uses: actions/checkout@v4
+          with:
+            fetch-depth: 0
+            lfs: true
+  
+        # 2. Library 캐시
+        - name: Cache Library
+          uses: actions/cache@v4
+          with:
+            path: Library
+            key: Library-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+            restore-keys: |
+              Library-
+
+        # 3. Unity Build (실시간 로그)
+        - name: Unity Build (APK)
+          shell: powershell
+          run: |
+            # Unity 실행 경로
+            $unityExe = "C:\Program Files\Unity\Hub\Editor\2022.3.60f1\Editor\Unity.exe"
+  
+            # Unity argument
+            $args = @(
+              "-batchmode"
+              "-nographics"
+              "-quit"
+              "-projectPath ."
+              "-buildTarget Android"
+              "-customBuildName Android"
+              "-customBuildPath build\Android\Android.apk"
+              "-executeMethod BuildSettingSO.OnChange_TestBuild"
+              "-ignore-import-errors"
+            )
+  
+            # Unity 실행 (실시간 출력)
+            & $unityExe $args
+  
+        # 4. rclone 설치 (PATH 등록 후)
+        - name: Install rclone
+          shell: powershell
+          run: |
+            # PATH에 choco 추가
+            $env:PATH += ";C:\ProgramData\chocolatey\bin"
+            choco upgrade rclone -y
+  
+        # 5. rclone 설정
+        - name: Setup rclone config
+          shell: powershell
+          run: |
+            $rclonePath = Join-Path $env:USERPROFILE ".config\rclone"
+            if (-Not (Test-Path $rclonePath)) { New-Item -ItemType Directory -Force -Path $rclonePath }
+            $env:RCLONE_CONFIG | Out-File -FilePath (Join-Path $rclonePath "rclone.conf") -Encoding 
+  
+        # 5. rclone 설정
+        - name: Setup rclone config
+          shell: powershell
+          run: |
+            $rclonePath = Join-Path $env:USERPROFILE ".config\rclone"
+            if (-Not (Test-Path $rclonePath)) { New-Item -ItemType Directory -Force -Path $rclonePath }
+            $env:RCLONE_CONFIG | Out-File -FilePath (Join-Path $rclonePath "rclone.conf") -Encoding ASCII
+  
+        # 6. Unity 버전 추출
+        - name: Export Unity Version
+          shell: powershell
+          run: |
+            $unityExe = "C:\Program Files\Unity\Hub\Editor\2022.3.60f1\Editor\Unity.exe"
+            $args = "-batchmode -quit -projectPath . -executeMethod BuildInfoExporter.ExportVersion"
+            Start-Process -FilePath $unityExe -ArgumentList $args -Wait
+  
+        # 7. Unity 버전 읽기
+        - name: Read Unity Version
+          id: version
+          shell: powershell
+          run: |
+            $VERSION = Get-Content -Path "unity_version.txt" -Raw
+            "version=$VERSION" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding ASCII
+  
+        # 8. 빌드 파일 이름 변경 및 Google Drive 업로드
+        - name: Rename and Upload to Google Drive (APK)
+          shell: powershell
+          run: |
+            $DATE = Get-Date -Format "yyyyMMdd"
+            $VERSION = '${{ steps.version.outputs.version }}'
+            $FILE_NAME = "${DATE}_${VERSION}.apk"
+            Move-Item -Path "build\Android\*.apk" -Destination "build\Android\$FILE_NAME" -Force
+            rclone copy "build\Android\$FILE_NAME" "gdrive:1bJ-xWbifFZY9KuQaPSpCi1KoLy9GQp38" -P
+  
+        # 9. 빌드 폴더 정리
+        - name: Cleanup Build Folder
+          shell: powershell
+          run: |
+            if (Test-Path "build") { Remove-Item "build\*" -Recurse -Force }
