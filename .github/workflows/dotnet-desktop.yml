@@ -50,7 +50,7 @@ jobs:
             "-batchmode"
             "-nographics"
             "-quit"
-            "-projectPath ."
+            "-projectPath $PWD"
             "-buildTarget Android"
             "-executeMethod BuildScript.BuildAndroid"
             "-ignore-import-errors"
