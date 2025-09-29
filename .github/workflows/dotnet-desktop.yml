@@ -56,7 +56,7 @@ jobs:
               "-buildTarget Android"
               "-customBuildName Android"
               "-customBuildPath build\Android\Android.apk"
-              "-executeMethod BuildSettingSO.OnChange_TestBuild"
+              # "-executeMethod BuildSettingSO.OnChange_TestBuild"
               "-ignore-import-errors"
             )
   
