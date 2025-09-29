@@ -40,17 +40,6 @@ jobs:
             restore-keys: |
               Library-
 
-        - name: Set Unity Environment Variables
-          shell: powershell
-          run: |
-            Set-Content -Path $Env:GITHUB_ENV -Value "UNITY_EXE=C:/Program Files/Unity/Hub/Editor/2022.3.60f1/Editor/Unity.exe" -Encoding utf8 -Append
-            Set-Content -Path $Env:GITHUB_ENV -Value "PROJECT_PATH=$PWD" -Encoding utf8 -Append
-            Set-Content -Path $Env:GITHUB_ENV -Value "OUTPUT_PATH=$PWD/build/Android/Android.apk" -Encoding utf8 -Append
-            Set-Content -Path $Env:GITHUB_ENV -Value "JAVA_HOME=C:/Program Files/Unity/Hub/Editor/2022.3.60f1/Editor/Data/PlaybackEngines/AndroidPlayer/OpenJDK" -Encoding utf8 -Append
-            Set-Content -Path $Env:GITHUB_ENV -Value "ANDROID_SDK_ROOT=C:/Program Files/Unity/Hub/Editor/2022.3.60f1/Editor/Data/PlaybackEngines/AndroidPlayer/SDK" -Encoding utf8 -Append
-            Set-Content -Path $Env:GITHUB_ENV -Value "NDK_HOME=C:/Program Files/Unity/Hub/Editor/2022.3.60f1/Editor/Data/PlaybackEngines/AndroidPlayer/NDK" -Encoding utf8 -Append
-            $Env:PATH += ";$Env:JAVA_HOME/bin;$Env:ANDROID_SDK_ROOT/platform-tools;$Env:NDK_HOME"
-
         # 3. Unity Build
         - name: Unity Build (APK)
           shell: powershell
