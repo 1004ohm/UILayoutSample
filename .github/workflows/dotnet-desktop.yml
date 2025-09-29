@@ -40,7 +40,7 @@ jobs:
             restore-keys: |
               Library-
 
-        # 3. Unity Build (실시간 로그)
+        # 3. Unity Build
         - name: Unity Build (APK)
           shell: powershell
           run: |
@@ -50,18 +50,25 @@ jobs:
               "-nographics"
               "-quit"
               "-projectPath ."
-              "-executeMethod BuildScript.BuildAndroid"   # 빌드 실행 함수 지정
+              "-executeMethod BuildScript.BuildAndroid"
               "-ignore-import-errors"
             )
-  
-            # Unity 실행 (실시간 출력)
             & $unityExe $args
   
-        # 4. rclone 설치 (PATH 등록 후)
+            # 빌드 결과 확인
+            $buildPath = "build\Android"
+            $apkFile = Join-Path $buildPath "Android.apk"
+            if (-Not (Test-Path $apkFile)) {
+                Write-Error "APK not found. Build failed!"
+                exit 1
+            } else {
+                Write-Host "APK generated successfully: $apkFile"
+            }
+  
+        # 4. rclone 설치
         - name: Install rclone
           shell: powershell
           run: |
-            # PATH에 choco 추가
             $env:PATH += ";C:\ProgramData\chocolatey\bin"
             choco upgrade rclone -y
   
@@ -73,33 +80,29 @@ jobs:
             if (-Not (Test-Path $rclonePath)) { New-Item -ItemType Directory -Force -Path $rclonePath }
             $env:RCLONE_CONFIG | Out-File -FilePath (Join-Path $rclonePath "rclone.conf") -Encoding ASCII
   
-        # 6. Unity 버전 추출
-        - name: Export Unity Version
-          shell: powershell
-          run: |
-            $unityExe = "C:\Program Files\Unity\Hub\Editor\2022.3.60f1\Editor\Unity.exe"
-            $args = "-batchmode -quit -projectPath . -executeMethod BuildInfoExporter.ExportVersion"
-            Start-Process -FilePath $unityExe -ArgumentList $args -Wait
-  
-        # 7. Unity 버전 읽기
-        - name: Read Unity Version
-          id: version
-          shell: powershell
-          run: |
-            $VERSION = Get-Content -Path "unity_version.txt" -Raw
-            "version=$VERSION" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding ASCII
-  
-        # 8. 빌드 파일 이름 변경 및 Google Drive 업로드
-        - name: Rename and Upload to Google Drive (APK)
+        # 6. APK 이름 변경
+        - name: Rename APK with Date & Version
+          id: rename_apk
           shell: powershell
           run: |
             $DATE = Get-Date -Format "yyyyMMdd"
-            $VERSION = '${{ steps.version.outputs.version }}'
-            $FILE_NAME = "${DATE}_${VERSION}.apk"
-            Move-Item -Path "build\Android\*.apk" -Destination "build\Android\$FILE_NAME" -Force
-            rclone copy "build\Android\$FILE_NAME" "gdrive:1bJ-xWbifFZY9KuQaPSpCi1KoLy9GQp38" -P
+            $VERSION = "v1.0"  # 필요 시 unity_version.txt에서 읽도록 수정 가능
+            $buildPath = "build\Android"
+            $apkFile = Join-Path $buildPath "Android.apk"
+            $newName = "${DATE}_${VERSION}.apk"
+            $newPath = Join-Path $buildPath $newName
+            Move-Item -Path $apkFile -Destination $newPath -Force
+            Write-Host "APK renamed to $newPath"
+            "apk_path=$newPath" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding ASCII
   
-        # 9. 빌드 폴더 정리
+        # 7. Google Drive 업로드
+        - name: Upload to Google Drive
+          shell: powershell
+          run: |
+            $apkPath = '${{ steps.rename_apk.outputs.apk_path }}'
+            rclone copy $apkPath "gdrive:1bJ-xWbifFZY9KuQaPSpCi1KoLy9GQp38" -P
+  
+        # 8. 빌드 폴더 정리
         - name: Cleanup Build Folder
           shell: powershell
           run: |
