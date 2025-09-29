@@ -2,7 +2,16 @@ name: UnityBuild
 
 on:
   schedule:
-    - cron: "0 0 * * *" # 매일 24시간마다 (UTC 기준)
+    # 매일 24시간마다 (UTC 기준)
+    - cron: "0 0 * * *"
+           # ┬ ┬ ┬ ┬ ┬
+           # │ │ │ │ │
+           # │ │ │ │ └─ Day of week (0 - 7) (0 or 7 is Sunday)
+           # │ │ │ └─ Month (1 - 12)
+           # │ │ └─ Day of month (1 - 31)
+           # │ └─ Hour (0 - 23)
+           # └─ Minute (0 - 59)
+    
   workflow_dispatch: # 수동 실행 가능
 
 permissions: write-all
