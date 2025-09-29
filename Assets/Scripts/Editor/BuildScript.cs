@@ -45,14 +45,16 @@ public static class BuildScript
         BuildReport report = BuildPipeline.BuildPlayer(scenes, outputPath, BuildTarget.Android, options);
 
         // 6. 빌드 결과 체크
+        string resultFile = Path.Combine(Directory.GetCurrentDirectory(), "unity_build_result.txt");
         if (report.summary.result == BuildResult.Succeeded)
         {
             Debug.Log($"APK 빌드 성공: {outputPath}");
+            File.WriteAllText(resultFile, "SUCCESS");
         }
         else
         {
             Debug.LogError($"APK 빌드 실패! 상태: {report.summary.result}");
-            throw new System.Exception("Unity Build Failed!");
+            File.WriteAllText(resultFile, $"FAIL: {report.summary.result}");
         }
 
         // 7. 추가: 빌드 후 라이브러리 초기화 문제 방지
