@@ -17,10 +17,16 @@ public static class BuildScript
         }
 
         // 2. 프로젝트 루트 절대 경로
-        string projectPath = System.IO.Path.GetFullPath(UnityEngine.Application.dataPath + "/..");
+        string projectPath = System.Environment.GetFolderPath(System.Environment.SpecialFolder.Desktop);
+
+        // 날짜와 버전으로 파일명 생성
+        string date = System.DateTime.Now.ToString("yyyyMMdd");
+        string version = UnityEditor.PlayerSettings.bundleVersion;
+        string fileName = $"{date}_{version}.apk";
+        string outputDir = System.IO.Path.Combine(projectPath, "build", "Android", fileName);
 
         // 3. 출력 경로 (절대 경로)
-        string outputDir = System.IO.Path.Combine(projectPath, "build", "Android");
+        //string outputDir = System.IO.Path.Combine(projectPath, "build", "Android");
         if (!System.IO.Directory.Exists(outputDir))
         {
             System.IO.Directory.CreateDirectory(outputDir);
