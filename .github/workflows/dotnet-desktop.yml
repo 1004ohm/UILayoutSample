@@ -154,7 +154,7 @@ jobs:
           $FILE_NAME = "${DATE}_${VERSION}.apk"
           $DEST_PATH = "build\Android\$FILE_NAME"
           Move-Item -Path $APK_PATH.FullName -Destination $DEST_PATH -Force
-          rclone copy $DEST_PATH "gdrive_apk:" -P
+          rclone copy $DEST_PATH "gdrive_apk:subfolder" -P
 
       # # 빌드 폴더 정리
       # - name: Cleanup Build Folder
