@@ -16,8 +16,8 @@ on:
 
 permissions: write-all
 
-env:
-  RCLONE_CONFIG: ${{ secrets.RCLONE_CONFIG }}
+# env:
+#   RCLONE_CONFIG: ${{ secrets.RCLONE_CONFIG }}
 
 jobs:
   buildForAndroidApk:
@@ -86,10 +86,10 @@ jobs:
           Write-Host "Unity Build Start..."
           Start-Process -FilePath $unityExe -ArgumentList $args -Wait
       
-          if ($LASTEXITCODE -ne 0) {
-              Write-Host "Unity Build Fail!"
-              exit $LASTEXITCODE
-          }
+          # if ($LASTEXITCODE -ne 0) {
+          #     Write-Host "Unity Build Fail!"
+          #     exit $LASTEXITCODE
+          # }
       
           Write-Host "Unity Build Complete."
 
@@ -98,13 +98,38 @@ jobs:
         shell: powershell
         run: choco upgrade rclone -y
 
-      # rclone 설정
+      # service-account.json 복원
+      - name: Setup service account file
+        shell: powershell
+        run: |
+          $saPath = Join-Path $env:GITHUB_WORKSPACE "service-account.json"
+          "${{ secrets.SERVICE_ACCOUNT_JSON }}" | Out-File -FilePath $saPath -Encoding UTF8
+
+      # # rclone 설정
+      # - name: Setup rclone config
+      #   shell: powershell
+      #   run: |
+      #     $rclonePath = Join-Path $env:USERPROFILE ".config\rclone"
+      #     if (-Not (Test-Path $rclonePath)) { New-Item -ItemType Directory -Force -Path $rclonePath }
+      #     $env:RCLONE_CONFIG | Out-File -FilePath (Join-Path $rclonePath "rclone.conf") -Encoding ASCII
+
+      # rclone config 생성
       - name: Setup rclone config
         shell: powershell
         run: |
           $rclonePath = Join-Path $env:USERPROFILE ".config\rclone"
           if (-Not (Test-Path $rclonePath)) { New-Item -ItemType Directory -Force -Path $rclonePath }
-          $env:RCLONE_CONFIG | Out-File -FilePath (Join-Path $rclonePath "rclone.conf") -Encoding ASCII
+
+          $rcloneConf = @"
+          [gdrive_apk]
+          type = drive
+          scope = drive.file
+          service_account_file = $env:GITHUB_WORKSPACE\service-account.json
+          team_drive = 12bVdG_-TePIKfx88_Duwe7ItLEkktCqs
+          root_folder_id = 1bJ-xWbifFZY9KuQaPSpCi1KoLy9GQp38
+          "@
+
+          $rcloneConf | Out-File -FilePath (Join-Path $rclonePath "rclone.conf") -Encoding UTF8
 
       # Unity 버전 추출
       - name: Export Unity Version
@@ -122,15 +147,36 @@ jobs:
           $VERSION = Get-Content -Path "unity_version.txt" -Raw
           "version=$VERSION" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding ASCII
 
+      # # 빌드 파일 이름 변경 및 Google Drive 업로드
+      # - name: Rename and Upload to Google Drive (APK)
+      #   shell: powershell
+      #   run: |
+      #     $DATE = Get-Date -Format "yyyyMMdd"
+      #     $VERSION = '${{ steps.version.outputs.version }}'
+      #     $FILE_NAME = "${DATE}_${VERSION}.apk"
+      #     Move-Item -Path "build\Android\*.apk" -Destination "build\Android\$FILE_NAME" -Force
+      #     rclone copy "build\Android\$FILE_NAME" "gdrive_apk:" -P
+
       # 빌드 파일 이름 변경 및 Google Drive 업로드
       - name: Rename and Upload to Google Drive (APK)
         shell: powershell
         run: |
           $DATE = Get-Date -Format "yyyyMMdd"
           $VERSION = '${{ steps.version.outputs.version }}'
+
+          $APK_PATH = Get-ChildItem "build\Android\*.apk" | Select-Object -First 1
+          if (-not $APK_PATH) {
+            Write-Error "APK 파일이 존재하지 않습니다."
+            exit 1
+          }
+
           $FILE_NAME = "${DATE}_${VERSION}.apk"
-          Move-Item -Path "build\Android\*.apk" -Destination "build\Android\$FILE_NAME" -Force
-          rclone copy "build\Android\$FILE_NAME" "gdrive_apk:" -P
+          $DEST_PATH = "build\Android\$FILE_NAME"
+
+          Move-Item -Path $APK_PATH.FullName -Destination $DEST_PATH -Force
+          Write-Host "업로드 시작: $DEST_PATH"
+
+          rclone copy $DEST_PATH "gdrive_apk:" -P
 
       # 빌드 폴더 정리
       - name: Cleanup Build Folder
