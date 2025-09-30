@@ -125,6 +125,14 @@ jobs:
       #     $unityExe = "C:\Program Files\Unity\Hub\Editor\2022.3.60f1\Editor\Unity.exe"
       #     $args = "-batchmode -quit -projectPath . -executeMethod BuildInfoExporter.ExportVersion"
       #     Start-Process -FilePath $unityExe -ArgumentList $args -Wait
+      
+      # Unity 버전 읽기
+      - name: Read Unity Version
+        id: version
+        shell: powershell
+        run: |
+          $VERSION = Get-Content -Path "unity_version.txt" -Raw
+          "version=$VERSION" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding ASCII
 
       # rclone 공유 드라이브 테스트
       - name: Test rclone Remote and Shared Drive
@@ -135,14 +143,6 @@ jobs:
       
           Write-Host "==== List root of shared drive (gdrive_apk) ===="
           rclone lsd gdrive_apk:
-      
-            # Unity 버전 읽기
-            - name: Read Unity Version
-              id: version
-              shell: powershell
-              run: |
-                $VERSION = Get-Content -Path "unity_version.txt" -Raw
-                "version=$VERSION" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding ASCII
 
       # 빌드 파일 이름 변경 및 Google Drive 업로드
       - name: Rename and Upload to Google Drive (APK)
