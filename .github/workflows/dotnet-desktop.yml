@@ -25,67 +25,67 @@ jobs:
     runs-on: self-hosted
 
     steps:
-      # # 프로젝트 체크아웃
-      # - name: Check Out
-      #   uses: actions/checkout@v4
-      #   with:
-      #     fetch-depth: 0
-      #     lfs: true
+      # 프로젝트 체크아웃
+      - name: Check Out
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          lfs: true
 
-      # # Unity Library 초기화 (에셋 DB 생성)
-      # - name: Initialize Unity Library
-      #   shell: powershell
-      #   run: |
-      #     $unityExe = "C:\Program Files\Unity\Hub\Editor\2022.3.60f1\Editor\Unity.exe"
-      #     $args = @(
-      #       "-batchmode",
-      #       "-nographics",
-      #       "-quit",
-      #       "-projectPath", "${{ github.workspace }}",
-      #       "-logFile", "${{ github.workspace }}\unity_init.log",
-      #       "-executeMethod", "BuildScript.InitLibrary"
-      #     )
+      # Unity Library 초기화 (에셋 DB 생성)
+      - name: Initialize Unity Library
+        shell: powershell
+        run: |
+          $unityExe = "C:\Program Files\Unity\Hub\Editor\2022.3.60f1\Editor\Unity.exe"
+          $args = @(
+            "-batchmode",
+            "-nographics",
+            "-quit",
+            "-projectPath", "${{ github.workspace }}",
+            "-logFile", "${{ github.workspace }}\unity_init.log",
+            "-executeMethod", "BuildScript.InitLibrary"
+          )
       
-      #     Write-Host "Initializing Unity Library..."
-      #     & $unityExe $args
-      #     if ($LASTEXITCODE -ne 0) {
-      #       Write-Host "Unity Library Initialization Failed!"
-      #       exit $LASTEXITCODE
-      #     }
+          Write-Host "Initializing Unity Library..."
+          & $unityExe $args
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "Unity Library Initialization Failed!"
+            exit $LASTEXITCODE
+          }
 
-      # # Library 캐시
-      # - name: Cache Library
-      #   uses: actions/cache@v4
-      #   with:
-      #     path: Library
-      #     key: Library-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
-      #     restore-keys: |
-      #       Library-
+      # Library 캐시
+      - name: Cache Library
+        uses: actions/cache@v4
+        with:
+          path: Library
+          key: Library-${{ hashFiles('Assets/**', 'Packages/**', 'ProjectSettings/**') }}
+          restore-keys: |
+            Library-
 
-      # # 씬 존재 확인 (Runner에서)
-      # - name: Verify Scenes
-      #   shell: powershell
-      #   run: |
-      #     $scenes = @("Assets/Scenes/SampleScene.unity")
-      #     foreach ($s in $scenes) {
-      #       if (-not (Test-Path $s)) {
-      #         Write-Error "씬 파일이 존재하지 않음: $s"
-      #         exit 1
-      #       } else {
-      #         Write-Host "씬 존재 확인: $s"
-      #       }
-      #     }
+      # 씬 존재 확인 (Runner에서)
+      - name: Verify Scenes
+        shell: powershell
+        run: |
+          $scenes = @("Assets/Scenes/SampleScene.unity")
+          foreach ($s in $scenes) {
+            if (-not (Test-Path $s)) {
+              Write-Error "씬 파일이 존재하지 않음: $s"
+              exit 1
+            } else {
+              Write-Host "씬 존재 확인: $s"
+            }
+          }
 
-      # # Unity 빌드 실행
-      # - name: Build Android APK
-      #   shell: powershell
-      #   run: |
-      #     $unityExe = "C:\Program Files\Unity\Hub\Editor\2022.3.60f1\Editor\Unity.exe"
-      #     $args = "-batchmode -nographics -quit -projectPath `"$env:GITHUB_WORKSPACE`" -executeMethod BuildScript.BuildAndroid -logFile `"$env:GITHUB_WORKSPACE\unity_build.log`" -ignore-import-errors"
+      # Unity 빌드 실행
+      - name: Build Android APK
+        shell: powershell
+        run: |
+          $unityExe = "C:\Program Files\Unity\Hub\Editor\2022.3.60f1\Editor\Unity.exe"
+          $args = "-batchmode -nographics -quit -projectPath `"$env:GITHUB_WORKSPACE`" -executeMethod BuildScript.BuildAndroid -logFile `"$env:GITHUB_WORKSPACE\unity_build.log`" -ignore-import-errors"
       
-      #     Write-Host "Unity Build Start..."
-      #     Start-Process -FilePath $unityExe -ArgumentList $args -Wait
-      #     Write-Host "Unity Build Complete."
+          Write-Host "Unity Build Start..."
+          Start-Process -FilePath $unityExe -ArgumentList $args -Wait
+          Write-Host "Unity Build Complete."
 
       # rclone 설치
       - name: Install rclone
@@ -118,13 +118,13 @@ jobs:
 
           $rcloneConf | Out-File -FilePath (Join-Path $rclonePath "rclone.conf") -Encoding UTF8
 
-      # # Unity 버전 추출
-      # - name: Export Unity Version
-      #   shell: powershell
-      #   run: |
-      #     $unityExe = "C:\Program Files\Unity\Hub\Editor\2022.3.60f1\Editor\Unity.exe"
-      #     $args = "-batchmode -quit -projectPath . -executeMethod BuildInfoExporter.ExportVersion"
-      #     Start-Process -FilePath $unityExe -ArgumentList $args -Wait
+      # Unity 버전 추출
+      - name: Export Unity Version
+        shell: powershell
+        run: |
+          $unityExe = "C:\Program Files\Unity\Hub\Editor\2022.3.60f1\Editor\Unity.exe"
+          $args = "-batchmode -quit -projectPath . -executeMethod BuildInfoExporter.ExportVersion"
+          Start-Process -FilePath $unityExe -ArgumentList $args -Wait
       
       # Unity 버전 읽기
       - name: Read Unity Version
@@ -155,10 +155,10 @@ jobs:
           $DEST_PATH = "build\Android\$FILE_NAME"
           
           Move-Item -Path $APK_PATH.FullName -Destination $DEST_PATH -Force
-          rclone copy $DEST_PATH "gdrive_apk:/" -P
+          rclone copy $DEST_PATH "gdrive_apk:" -P
 
-      # # 빌드 폴더 정리
-      # - name: Cleanup Build Folder
-      #   shell: powershell
-      #   run: |
-      #     if (Test-Path "build") { Remove-Item "build\*" -Recurse -Force }
+      # 빌드 폴더 정리
+      - name: Cleanup Build Folder
+        shell: powershell
+        run: |
+          if (Test-Path "build") { Remove-Item "build\*" -Recurse -Force }
