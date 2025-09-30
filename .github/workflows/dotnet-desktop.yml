@@ -112,7 +112,7 @@ jobs:
           type = drive
           scope = drive
           service_account_file = $env:GITHUB_WORKSPACE\service-account.json
-          drive_id = 11EIuv5zMr8TawQle8TEKrJWffgWsCC3P
+          team_drive = 11EIuv5zMr8TawQle8TEKrJWffgWsCC3P
           "@
 
           $rcloneConf | Out-File -FilePath (Join-Path $rclonePath "rclone.conf") -Encoding UTF8
