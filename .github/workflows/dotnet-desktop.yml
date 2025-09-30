@@ -126,7 +126,7 @@ jobs:
           type = drive
           scope = drive.file
           service_account_file = $env:GITHUB_WORKSPACE\service-account.json
-          team_drive = 12bVdG_-TePIKfx88_Duwe7ItLEkktCqs
+          //team_drive = 12bVdG_-TePIKfx88_Duwe7ItLEkktCqs
           root_folder_id = 1bJ-xWbifFZY9KuQaPSpCi1KoLy9GQp38
           "@
 
