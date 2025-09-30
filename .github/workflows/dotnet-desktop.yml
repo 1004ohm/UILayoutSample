@@ -62,94 +62,78 @@ jobs:
           restore-keys: |
             Library-
 
-      # 빌드 실행
+      # 씬 존재 확인 (Runner에서)
+      - name: Verify Scenes
+        shell: powershell
+        run: |
+          $scenes = @("Assets/Scenes/SampleScene.unity")
+          foreach ($s in $scenes) {
+            if (-not (Test-Path $s)) {
+              Write-Error "씬 파일이 존재하지 않음: $s"
+              exit 1
+            } else {
+              Write-Host "씬 존재 확인: $s"
+            }
+          }
+
+      # Unity 빌드 실행
       - name: Build Android APK
         shell: powershell
         run: |
           $unityExe = "C:\Program Files\Unity\Hub\Editor\2022.3.60f1\Editor\Unity.exe"
           $args = "-batchmode -nographics -quit -projectPath `"$env:GITHUB_WORKSPACE`" -buildTarget Android -executeMethod BuildScript.BuildAndroid -logFile `"$env:GITHUB_WORKSPACE\unity_build.log`" -ignore-import-errors"
-
-          Write-Host "🚀 Unity Build Start..."
-          Start-Process -FilePath $unityExe -ArgumentList $args -Wait -PassThru
-
+      
+          Write-Host "Unity Build Start..."
+          Start-Process -FilePath $unityExe -ArgumentList $args -Wait
+      
           if ($LASTEXITCODE -ne 0) {
-              Write-Host "❌ Unity Build Fail!"
+              Write-Host "Unity Build Fail!"
               exit $LASTEXITCODE
           }
-
-          Write-Host "✅ Unity Build Complete."
-      # # 씬 존재 확인 (Runner에서)
-      # - name: Verify Scenes
-      #   shell: powershell
-      #   run: |
-      #     $scenes = @("Assets/Scenes/SampleScene.unity")
-      #     foreach ($s in $scenes) {
-      #       if (-not (Test-Path $s)) {
-      #         Write-Error "씬 파일이 존재하지 않음: $s"
-      #         exit 1
-      #       } else {
-      #         Write-Host "씬 존재 확인: $s"
-      #       }
-      #     }
-
-      # # Unity 빌드 실행
-      # - name: Build Android APK
-      #   shell: powershell
-      #   run: |
-      #     $unityExe = "C:\Program Files\Unity\Hub\Editor\2022.3.60f1\Editor\Unity.exe"
-      #     $args = "-batchmode -nographics -quit -projectPath `"$env:GITHUB_WORKSPACE`" -buildTarget Android -executeMethod BuildScript.BuildAndroid -logFile `"$env:GITHUB_WORKSPACE\unity_build.log`" -ignore-import-errors"
       
-      #     Write-Host "Unity Build Start..."
-      #     Start-Process -FilePath $unityExe -ArgumentList $args -Wait
-      
-      #     if ($LASTEXITCODE -ne 0) {
-      #         Write-Host "Unity Build Fail!"
-      #         exit $LASTEXITCODE
-      #     }
-      
-      #     Write-Host "Unity Build Complete."
+          Write-Host "Unity Build Complete."
 
-      # # rclone 설치
-      # - name: Install rclone
-      #   shell: powershell
-      #   run: choco upgrade rclone -y
+      # rclone 설치
+      - name: Install rclone
+        shell: powershell
+        run: choco upgrade rclone -y
 
-      # # rclone 설정
-      # - name: Setup rclone config
-      #   shell: powershell
-      #   run: |
-      #     $rclonePath = Join-Path $env:USERPROFILE ".config\rclone"
-      #     if (-Not (Test-Path $rclonePath)) { New-Item -ItemType Directory -Force -Path $rclonePath }
-      #     $env:RCLONE_CONFIG | Out-File -FilePath (Join-Path $rclonePath "rclone.conf") -Encoding ASCII
+      # rclone 설정
+      - name: Setup rclone config
+        shell: powershell
+        run: |
+          $rclonePath = Join-Path $env:USERPROFILE ".config\rclone"
+          if (-Not (Test-Path $rclonePath)) { New-Item -ItemType Directory -Force -Path $rclonePath }
+          $env:RCLONE_CONFIG | Out-File -FilePath (Join-Path $rclonePath "rclone.conf") -Encoding ASCII
 
-      # # Unity 버전 추출
-      # - name: Export Unity Version
-      #   shell: powershell
-      #   run: |
-      #     $unityExe = "C:\Program Files\Unity\Hub\Editor\2022.3.60f1\Editor\Unity.exe"
-      #     $args = "-batchmode -quit -projectPath . -executeMethod BuildInfoExporter.ExportVersion"
-      #     Start-Process -FilePath $unityExe -ArgumentList $args -Wait
+      # Unity 버전 추출
+      - name: Export Unity Version
+        shell: powershell
+        run: |
+          $unityExe = "C:\Program Files\Unity\Hub\Editor\2022.3.60f1\Editor\Unity.exe"
+          $args = "-batchmode -quit -projectPath . -executeMethod BuildInfoExporter.ExportVersion"
+          Start-Process -FilePath $unityExe -ArgumentList $args -Wait
 
-      # # Unity 버전 읽기
-      # - name: Read Unity Version
-      #   id: version
-      #   shell: powershell
-      #   run: |
-      #     $VERSION = Get-Content -Path "unity_version.txt" -Raw
-      #     "version=$VERSION" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding ASCII
+      # Unity 버전 읽기
+      - name: Read Unity Version
+        id: version
+        shell: powershell
+        run: |
+          $VERSION = Get-Content -Path "unity_version.txt" -Raw
+          "version=$VERSION" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding ASCII
 
-      # # 빌드 파일 이름 변경 및 Google Drive 업로드
-      # - name: Rename and Upload to Google Drive (APK)
-      #   shell: powershell
-      #   run: |
-      #     $DATE = Get-Date -Format "yyyyMMdd"
-      #     $VERSION = '${{ steps.version.outputs.version }}'
-      #     $FILE_NAME = "${DATE}_${VERSION}.apk"
-      #     Move-Item -Path "build\Android\*.apk" -Destination "build\Android\$FILE_NAME" -Force
-      #     rclone copy "build\Android\$FILE_NAME" "gdrive:1bJ-xWbifFZY9KuQaPSpCi1KoLy9GQp38" -P
+      # 빌드 파일 이름 변경 및 Google Drive 업로드
+      - name: Rename and Upload to Google Drive (APK)
+        shell: powershell
+        run: |
+          $DATE = Get-Date -Format "yyyyMMdd"
+          $VERSION = '${{ steps.version.outputs.version }}'
+          $FILE_NAME = "${DATE}_${VERSION}.apk"
+          Move-Item -Path "build\Android\*.apk" -Destination "build\Android\$FILE_NAME" -Force
+          rclone copy "build\Android\$FILE_NAME" "gdrive:1bJ-xWbifFZY9KuQaPSpCi1KoLy9GQp38" -P
 
-      # # 빌드 폴더 정리
-      # - name: Cleanup Build Folder
-      #   shell: powershell
-      #   run: |
-      #     if (Test-Path "build") { Remove-Item "build\*" -Recurse -Force }
+      # 빌드 폴더 정리
+      - name: Cleanup Build Folder
+        shell: powershell
+        run: |
+          if (Test-Path "build") { Remove-Item "build\*" -Recurse -Force }
