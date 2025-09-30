@@ -156,8 +156,8 @@ jobs:
       #     Move-Item -Path $APK_PATH.FullName -Destination $DEST_PATH -Force
       #     rclone copy $DEST_PATH "gdrive_apk:'01 프로젝트/03 악사키우기/60 빌드/APK'" -P
 
-      # 빌드 폴더 정리
-      - name: Cleanup Build Folder
-        shell: powershell
-        run: |
-          if (Test-Path "build") { Remove-Item "build\*" -Recurse -Force }
+      # # 빌드 폴더 정리
+      # - name: Cleanup Build Folder
+      #   shell: powershell
+      #   run: |
+      #     if (Test-Path "build") { Remove-Item "build\*" -Recurse -Force }
