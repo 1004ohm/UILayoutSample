@@ -1,7 +1,10 @@
+#if UNITY_EDITOR
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
+using UnityEditor.Build.Reporting;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 
 public static class BuildScript
@@ -67,3 +70,4 @@ public static class BuildScript
         AssetDatabase.Refresh();
     }
 }
+#endif
