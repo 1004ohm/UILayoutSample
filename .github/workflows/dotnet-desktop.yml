@@ -130,7 +130,7 @@ jobs:
           $VERSION = '${{ steps.version.outputs.version }}'
           $FILE_NAME = "${DATE}_${VERSION}.apk"
           Move-Item -Path "build\Android\*.apk" -Destination "build\Android\$FILE_NAME" -Force
-          rclone copy "build\Android\$FILE_NAME" "gdrive:1bJ-xWbifFZY9KuQaPSpCi1KoLy9GQp38" -P
+          rclone copy "build\Android\$FILE_NAME" "gdrive_apk:" -P
 
       # 빌드 폴더 정리
       - name: Cleanup Build Folder
