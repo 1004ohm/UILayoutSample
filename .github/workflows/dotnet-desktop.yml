@@ -133,17 +133,42 @@ jobs:
           $VERSION = Get-Content -Path "unity_version.txt" -Raw
           "version=$VERSION" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding ASCII
 
-      # 빌드 파일 이름 변경 및 Google Drive 업로드
-      - name: Rename and Upload to Google Drive (APK)
+      # # 빌드 파일 이름 변경 및 Google Drive 업로드
+      # - name: Rename and Upload to Google Drive (APK)
+      #   shell: powershell
+      #   run: |
+      #     $DATE = Get-Date -Format "yyyyMMdd"
+      #     $VERSION = '${{ steps.version.outputs.version }}'
+      #     $APK_PATH = Get-ChildItem "build\Android\*.apk" | Select-Object -First 1
+      #     $FILE_NAME = "${DATE}_${VERSION}.apk"
+      #     $DEST_PATH = "build\Android\$FILE_NAME"
+      #     Move-Item -Path $APK_PATH.FullName -Destination $DEST_PATH -Force
+      #     rclone copy $DEST_PATH "gdrive_apk:" -P
+      # PowerShell로 APK 이름 변경
+      - name: Rename APK
         shell: powershell
+        id: rename_apk
         run: |
           $DATE = Get-Date -Format "yyyyMMdd"
           $VERSION = '${{ steps.version.outputs.version }}'
           $APK_PATH = Get-ChildItem "build\Android\*.apk" | Select-Object -First 1
+          if (-not $APK_PATH) { Write-Error "APK 파일을 찾을 수 없습니다."; exit 1 }
+
           $FILE_NAME = "${DATE}_${VERSION}.apk"
-          $DEST_PATH = "build\Android\$FILE_NAME"
+          $DEST_PATH = Join-Path $APK_PATH.DirectoryName $FILE_NAME
           Move-Item -Path $APK_PATH.FullName -Destination $DEST_PATH -Force
-          rclone copy $DEST_PATH "gdrive_apk:" -P
+
+          Write-Host "APK 파일 이름 변경 완료: $DEST_PATH"
+
+          # GitHub Actions output으로 전달
+          echo "::set-output name=apk_path::$DEST_PATH"
+
+      - name: Upload a file to Google Drive
+        uses: willo32/google-drive-upload-action@v1
+        with:
+          target: ${{ steps.rename_apk.outputs.apk_path }}
+          credentials: ${{ secrets.SERVICE_ACCOUNT_JSON }}
+          parent_folder_id: 12bVdG_-TePIKfx88_Duwe7ItLEkktCqs
 
       # # 빌드 폴더 정리
       # - name: Cleanup Build Folder
