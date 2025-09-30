@@ -20,11 +20,11 @@ permissions: write-all
 #   RCLONE_CONFIG: ${{ secrets.RCLONE_CONFIG }}
 
 jobs:
-  # buildForAndroidApk:
-  #   name: Build Android APK 🛸
-  #   runs-on: self-hosted
+  buildForAndroidApk:
+    name: Build Android APK 🛸
+    runs-on: self-hosted
 
-  #   steps:
+    steps:
   #     # 프로젝트 체크아웃
   #     - name: Check Out
   #       uses: actions/checkout@v4
