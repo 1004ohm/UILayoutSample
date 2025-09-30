@@ -81,7 +81,7 @@ jobs:
         shell: powershell
         run: |
           $unityExe = "C:\Program Files\Unity\Hub\Editor\2022.3.60f1\Editor\Unity.exe"
-          $args = "-batchmode -nographics -quit -projectPath `"$env:GITHUB_WORKSPACE`" -buildTarget Android -executeMethod BuildScript.BuildAndroid -logFile `"$env:GITHUB_WORKSPACE\unity_build.log`" -ignore-import-errors"
+          $args = "-batchmode -nographics -quit -projectPath `"$env:GITHUB_WORKSPACE`" -executeMethod BuildScript.BuildAndroid -logFile `"$env:GITHUB_WORKSPACE\unity_build.log`" -ignore-import-errors"
       
           Write-Host "Unity Build Start..."
           Start-Process -FilePath $unityExe -ArgumentList $args -Wait
