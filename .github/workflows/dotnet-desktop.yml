@@ -103,7 +103,7 @@ jobs:
         shell: powershell
         run: |
           $saPath = Join-Path $env:GITHUB_WORKSPACE "service-account.json"
-          "${{ secrets.SERVICE_ACCOUNT_JSON }}" | Out-File -FilePath $saPath -Encoding UTF8
+          '${{ secrets.SERVICE_ACCOUNT_JSON }}' | Out-File -FilePath $saPath -Encoding UTF8
 
       # # rclone 설정
       # - name: Setup rclone config
