@@ -111,8 +111,8 @@ jobs:
           [gdrive_apk]
           type = drive
           scope = drive
-          service_account_file = /path/to/service-account.json
-          team_drive = 12bVdG_-TePIKfx88_Duwe7ItLEkktCqs
+          service_account_file = $env:GITHUB_WORKSPACE\service-account.json
+          drive_id = 12bVdG_-TePIKfx88_Duwe7ItLEkktCqs
           root_folder_id = 1bJ-xWbifFZY9KuQaPSpCi1KoLy9GQp38
           "@
 
